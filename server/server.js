@@ -3,6 +3,7 @@ const http = require('http');
 const express = require('express');
 const socketIO = require('socket.io');
 
+const {isValidString} = require('./utils/validation');
 const {generateMessage, generateLocationMessage} = require('./utils/message');
 
 const app = express();
@@ -17,9 +18,18 @@ app.use(express.static(publicPath));
 io.on('connection', (socket) => {
   console.log('New user connected');
 
-  socket.emit('newMessage', generateMessage('Admin', 'Welcome to chat app'));
 
-  socket.broadcast.emit('newMessage', generateMessage('Admin', 'New user joined!'));
+
+  socket.on('join', (params, callback) => {
+    if(!isValidString(params.name) || !isValidString(params.roomname)){
+      callback('Name and Room Name are invalid!');
+    }
+    socket.join(params.roomname);
+
+    socket.emit('newMessage', generateMessage('Admin', 'Welcome to chat app'));
+    socket.broadcast.to(params.roomname).emit('newMessage', generateMessage('Admin', `${params.name} has joined!`));
+    callback();
+  });
 
   socket.on('createMessage', (msg, callback) => {
     console.log('create message', msg);
